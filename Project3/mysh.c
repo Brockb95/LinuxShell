@@ -19,33 +19,46 @@ char ** parse(char *);
 int launch(char **);
 int execute(char **);
 // shell builtin functions declarations
-//int mycat(char ** args);
+int mycat(char ** args);
 //int myls(char ** args);
 int mycd(char **);
-int pwd();
+int mypwd();
 int myexit();
 // list of builtin commands
 char * builtin_str[] = {
-//	"cat",
+	"mycat",
 //	"cp",
 //	"ls",
-	"cd",
-	"pwd",
-	"exit"
+	"mycd",
+	"mypwd",
+	"myexit"
 };
 // list of builtin function pointers
 int (*builtin_func[]) (char **) = {
-//	&mycat,
+	&mycat,
 //	&mycp,
 //	&myls,
 	&mycd,
-	&pwd,
+	&mypwd,
 	&myexit
 };
 // finds number of builtin functions
 int num_builtins(){
 	return sizeof(builtin_str) / sizeof(char *);
 }
+
+extern int errno;
+static char * err_str;
+
+
+
+int mycp(char **);
+	// handlers for mycp
+	int mycpfiletofile(char **);
+	int mycpfiletodir(char **);
+	int mycpdirtodir(char **);
+
+
 
 int main(int argc, char ** argv){
 	// load config
@@ -55,6 +68,11 @@ int main(int argc, char ** argv){
 	// cleanup
 	return 0;
 }
+
+
+
+
+
 
 void loop(){
 	char * line;
@@ -77,6 +95,8 @@ void loop(){
 		free(args);
 	}while(status);
 }
+
+
 // takes the current line from stdin as a command
 char * read_command(){
 	char * line = NULL;
@@ -161,7 +181,7 @@ int mycd(char ** args){
 	return 1;
 }
 // builtin command pwd; prints working directory
-int pwd(){
+int mypwd() {
 	char cwd[1024];
 	if(getcwd(cwd, sizeof(cwd)) != NULL)
 		printf("%s\n", cwd);
@@ -172,3 +192,83 @@ int pwd(){
 int myexit(){
 	return 0;
 }
+
+
+
+
+
+int mycat(char ** args) {
+
+	char buffer[256];
+
+	// pipe
+	int fd[2], a;
+
+	if (pipe(fd) < 0)
+        exit(1);
+
+
+	if(args[1] == NULL)
+	fprintf(stderr, "mysh: expected argument to \"mycat\"\n");
+	
+	// for the command "mycat filename"
+	else if(args[1] != NULL && args[2] == NULL) {
+		fd[0] = open(args[1], O_RDWR);
+		read(fd[0], buffer, 256);
+		printf("%s", buffer);
+	}
+
+	// for the command "mycat < file"
+	else if(strcmp(args[1], "<") == 0 && args[3] == NULL) {
+		fd[0] = open(args[2], O_RDWR);
+		read(fd[0], buffer, 256);
+		printf("%s", buffer);
+	}
+
+
+
+	// for the command "mycat < file > file"
+	else if(strcmp(args[3], ">") == 0 && strcmp(args[1], "<") == 0) {
+
+		// open file to write to buffer
+		fd[0] = open(args[2], O_RDWR);
+
+		// read content of file and write to buffer
+		a = read(fd[0], buffer, 256);
+
+		// open file to write from buffer
+		fd[1] = open(args[4], O_RDWR);
+
+		// write to second file
+		write(fd[1], buffer, a-1);
+
+
+		printf("%d", a);
+	}
+
+	else {
+		printf("invalid command, please put a space before and after redirection");
+	}
+
+	close(fd[0]);
+	close(fd[1]);
+	return 1;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
