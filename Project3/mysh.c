@@ -19,8 +19,8 @@ char ** parse(char *);
 int launch(char **);
 int execute(char **);
 // shell builtin functions declarations
-int mycat(char ** args);
-//int myls(char ** args);
+int mycat(char **);
+//int myls(char **);
 int mycd(char **);
 int mypwd();
 int myexit();
