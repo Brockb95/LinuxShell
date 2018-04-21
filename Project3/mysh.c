@@ -200,11 +200,13 @@ int mycat(char ** args) {
 	char buffer[256];
 	// pipe
 	int fd[2], a;
-	if (pipe(fd) < 0)
-        exit(1);
-
+	if (pipe(fd) < 0){
+        	perror("mycat: ");
+		return 1;
+	}
+	
 	if(args[1] == NULL)
-	fprintf(stderr, "mysh: expected argument to \"mycat\"\n");
+		fprintf(stderr, "mysh: expected argument to \"mycat\"\n");
 
 	// check if file exists
 	else if(strcmp(args[1], "<") == 0 && open(args[2], O_RDWR) == -1) {
