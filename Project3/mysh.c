@@ -12,6 +12,7 @@
 #define BLU "\x1B[34m"
 #define GRE "\x1B[32m"
 #define RESET "\x1B[0m"
+
 // functions for interpreting and executing commands
 void loop();
 char * read_command();
@@ -19,33 +20,43 @@ char ** parse(char *);
 int launch(char **);
 int execute(char **);
 // shell builtin functions declarations
-//int mycat(char ** args);
-//int myls(char ** args);
+int mycat(char **);
+int mycp(char **);
+//int myls(char **);
 int mycd(char **);
-int pwd();
+int mypwd();
 int myexit();
 // list of builtin commands
 char * builtin_str[] = {
-//	"cat",
+	"mycat",
+	"mycp",
 //	"cp",
 //	"ls",
-	"cd",
-	"pwd",
-	"exit"
+	"mycd",
+	"mypwd",
+	"myexit"
 };
 // list of builtin function pointers
 int (*builtin_func[]) (char **) = {
-//	&mycat,
-//	&mycp,
+	&mycat,
+	&mycp,
 //	&myls,
 	&mycd,
-	&pwd,
+	&mypwd,
 	&myexit
 };
 // finds number of builtin functions
 int num_builtins(){
 	return sizeof(builtin_str) / sizeof(char *);
 }
+
+/*int mycp(char **);
+	// handlers for mycp
+	int mycpfiletofile(char **);
+	int mycpfiletodir(char **);
+	int mycpdirtodir(char **);
+*/
+
 
 int main(int argc, char ** argv){
 	// load config
@@ -55,6 +66,7 @@ int main(int argc, char ** argv){
 	// cleanup
 	return 0;
 }
+
 
 void loop(){
 	char * line;
@@ -77,6 +89,8 @@ void loop(){
 		free(args);
 	}while(status);
 }
+
+
 // takes the current line from stdin as a command
 char * read_command(){
 	char * line = NULL;
@@ -161,7 +175,7 @@ int mycd(char ** args){
 	return 1;
 }
 // builtin command pwd; prints working directory
-int pwd(){
+int mypwd() {
 	char cwd[1024];
 	if(getcwd(cwd, sizeof(cwd)) != NULL)
 		printf("%s\n", cwd);
@@ -171,4 +185,117 @@ int pwd(){
 // builtin command exit; exits shell
 int myexit(){
 	return 0;
+}
+
+
+int mycat(char ** args) {
+
+	char buffer[256];
+	// pipe
+	int fd[2], a;
+	if (pipe(fd) < 0){
+        	perror("mycat: ");
+		return 1;
+	}
+	
+	if(args[1] == NULL)
+		fprintf(stderr, "mysh: expected argument to \"mycat\"\n");
+
+	// check if file exists
+	else if(strcmp(args[1], "<") == 0 && open(args[2], O_RDWR) == -1) {
+		printf("mycat: %s: No such file  - Space must be placed between redirection\n",
+args[2]);
+	}
+
+	// for the command "mycat < file"
+	else if(strcmp(args[1], "<") == 0 && args[3] == NULL) {
+		fd[0] = open(args[2], O_RDWR);
+		read(fd[0], buffer, 256);
+		printf("%s", buffer);
+	}
+
+	// check if file exists
+	else if(open(args[1], O_RDWR) == -1 && args[2] == NULL) {
+		printf("mycat: %s: No such file \n", args[1]);
+	}
+
+	// for the command "mycat < file > file"
+	else if(strcmp(args[1], "<") == 0 && open(args[2], O_RDWR) != -1 && strcmp(args[3], ">") == 0)
+{
+		if (open(args[4], O_RDWR) == -1) {
+			remove(args[4]);
+		}
+		// open file to write to buffer
+		fd[0] = open(args[2], O_RDWR);
+		// read content of file and write to buffer
+		a = read(fd[0], buffer, 256);
+		// open file to write from buffer
+		fd[1] = open(args[4], O_RDWR | O_CREAT, 0777);
+		// write to second file
+		write(fd[1], buffer, a-1);
+	}
+
+	
+	// for the command "mycat filename"
+	else if (open(args[1], O_RDWR) != -1 && args[2] == NULL) {
+		fd[0] = open(args[1], O_RDWR);
+		read(fd[0], buffer, 256);
+		printf("%s", buffer);
+	}
+
+
+	else {
+		printf("mycat: %s: No such file 3  - Space must be placed between redirection\n",
+args[1]);
+	}
+	close(fd[0]);
+	close(fd[1]);
+	return 1;
+}
+
+int mycp(char** args)
+{
+  int argc, in, out;
+  char *from, *to;
+  char buffer[100];
+  ssize_t bytes;
+
+  // check for argument
+  if(argc < 3) {
+    fprintf(stderr, "usage: %s source destination\n", args[0]);
+    return 0;
+  } 
+
+  // open the files
+  in = open(args[1], O_RDONLY);
+  //check for errors
+  if(!in){
+	fprintf(stderr, "%s Cannot open file", args[1]);
+   	return 1;
+   }
+
+  out = open(args[2], O_WRONLY|O_CREAT|O_TRUNC, 00644);
+  if(!out){
+	fprintf(stderr, "%s Cannot open file", args[2]);
+	return 2;
+  }
+
+  // loop through and copy
+  while ((bytes = read(in, buffer, 512)) > 0) {
+    	if(write(out, buffer, bytes) < bytes){
+		fprintf(stderr, "Cannot write to file");
+		return 3;
+	}
+  }
+
+  //must ends at 0
+  if (bytes < 0) {
+    fprintf(stderr, "error reading file");
+    return 4;
+  }
+
+  // close the files
+  close(in);
+  close(out);
+  return 5;
 }
