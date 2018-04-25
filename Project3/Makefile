@@ -1,11 +1,9 @@
-CC=gcc
-CFLAGS=-g -Wall
+DFLAGS = -g -Wall -o
 
-run: shell
-	./shell
-shell: mysh.o
-	$(CC) -o shell mysh.o
-mysh.o: mysh.c
-	$(CC) -c mysh.c
-clean: 
-	rm -rf shell *.o
+mycp: mycp.c
+	gcc $(DFLAGS) mycp mycp.c
+mycp.o: mycp.c
+	gcc $(DFLAGS) mycp.o mycp.c
+clean:
+	rm -rf ./-c mycp *.o
+    

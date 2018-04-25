@@ -1,1 +1,1 @@
-the latest news
+this text is to replace the file
