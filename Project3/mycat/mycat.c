@@ -74,7 +74,7 @@ int mycat(int argc, char ** args) {
 
 
 	else {
-		printf("mycat: %s: No such file 3  - Space must be placed between redirection\n", args[1]);
+		printf("mycat: %s: No such file - Space must be placed between redirection\n", args[1]);
 	}
 	close(fd[0]);
 	close(fd[1]);
